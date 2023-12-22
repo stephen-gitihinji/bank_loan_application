@@ -40,7 +40,6 @@ let Application = Record({
     total_amount: float32,
     createdAt: nat64,
     updatedAt: Opt(nat64),
-    current_status: text,
 });
 
 // Defining the error message
