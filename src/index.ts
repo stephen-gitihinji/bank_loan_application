@@ -8,6 +8,7 @@ let applicationPayload = Record({
     duration: nat32,
 })
 //model for the application storage
+
 let Application = Record({
     id: text,
     principal: nat32,
@@ -17,6 +18,8 @@ let Application = Record({
     total_amount:float32,
     createdAt: nat64,
     updatedAt: Opt(nat64),
+    current_status: text,
+
 })
 //defining the error message
 const Error = Variant ({
@@ -39,14 +42,14 @@ export default Canister({
     }),
 
     //making a loan application
-    addApplication: update([applicationPayload], Result(Application, Error),(payload)=>{
+    addApplication: update([applicationPayload], Result(text, Error),(payload)=>{
         let interest_calculated: float32 = payload.principal *rate* (payload.duration/12);
         let total_calculated: float32 = payload.principal + interest_calculated;
-        let application = {id: uuidv4(), interest_rate: rate, interest:interest_calculated,total_amount:total_calculated, createdAt: ic.time(), updatedAt: None, ...payload,};
+        let application = {id: uuidv4(), interest_rate: rate, interest:interest_calculated,total_amount:total_calculated, createdAt: ic.time(), updatedAt: None, ...payload};
         //inserting the new application to the storage
         application_storage.insert(application.id, application);
         // return Ok(`Your loan application of ${payload.principal} for a duration of ${payload.duration} month(s) has been received successfully`);
-        return Ok(application);
+        return Ok(`Your application of ${application.id} with a principal amount ${application.principal} for a duration of ${application.duration} has been received successfully!`);
     }),
 
     //retrieving all the applications:
@@ -84,7 +87,7 @@ export default Canister({
             return Err({ NotFound: `the application with id=${id}. not found` });
         }
         return Ok(`You have deleted an application of id:${id}`);
-    })
+    }),
 });
 
 //function to allow the use of uuid

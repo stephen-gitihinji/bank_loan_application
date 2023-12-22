@@ -1,8 +1,8 @@
 service: () -> {
-    addApplication: (record {"principal":nat32; duration:nat32}) -> (variant {Ok:record {id:text; "principal":nat32; duration:nat16; total_amount:float32; interest:float32; createdAt:nat64; updatedAt:opt nat64; interest_rate:float32}; Err:variant {InvalidPayload:text; NotFound:text}});
+    addApplication: (record {"principal":nat32; duration:nat32}) -> (variant {Ok:text; Err:variant {InvalidPayload:text; NotFound:text}});
     calculateAmount: (record {"principal":nat32; duration:nat32}) -> (text) query;
     deleteApplication: (text) -> (variant {Ok:text; Err:variant {InvalidPayload:text; NotFound:text}});
-    getAllApplications: () -> (variant {Ok:vec record {id:text; "principal":nat32; duration:nat16; total_amount:float32; interest:float32; createdAt:nat64; updatedAt:opt nat64; interest_rate:float32}; Err:variant {InvalidPayload:text; NotFound:text}}) query;
-    getSpecificApplication: (text) -> (variant {Ok:record {id:text; "principal":nat32; duration:nat16; total_amount:float32; interest:float32; createdAt:nat64; updatedAt:opt nat64; interest_rate:float32}; Err:variant {InvalidPayload:text; NotFound:text}}) query;
+    getAllApplications: () -> (variant {Ok:vec record {id:text; "principal":nat32; duration:nat16; total_amount:float32; interest:float32; createdAt:nat64; updatedAt:opt nat64; interest_rate:float32; current_status:text}; Err:variant {InvalidPayload:text; NotFound:text}}) query;
+    getSpecificApplication: (text) -> (variant {Ok:record {id:text; "principal":nat32; duration:nat16; total_amount:float32; interest:float32; createdAt:nat64; updatedAt:opt nat64; interest_rate:float32; current_status:text}; Err:variant {InvalidPayload:text; NotFound:text}}) query;
     updateApplication: (text, record {"principal":nat32; duration:nat32}) -> (variant {Ok:text; Err:variant {InvalidPayload:text; NotFound:text}});
 }
