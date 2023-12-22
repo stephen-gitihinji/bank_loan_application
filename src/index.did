@@ -1,8 +1,25 @@
-service: () -> {
-    addApplication: (record {"principal":nat32; duration:nat32}) -> (variant {Ok:text; Err:variant {InvalidPayload:text; NotFound:text}});
-    calculateAmount: (record {"principal":nat32; duration:nat32}) -> (text) query;
-    deleteApplication: (text) -> (variant {Ok:text; Err:variant {InvalidPayload:text; NotFound:text}});
-    getAllApplications: () -> (variant {Ok:vec record {id:text; "principal":nat32; duration:nat16; total_amount:float32; interest:float32; createdAt:nat64; updatedAt:opt nat64; interest_rate:float32}; Err:variant {InvalidPayload:text; NotFound:text}}) query;
-    getSpecificApplication: (text) -> (variant {Ok:record {id:text; "principal":nat32; duration:nat16; total_amount:float32; interest:float32; createdAt:nat64; updatedAt:opt nat64; interest_rate:float32}; Err:variant {InvalidPayload:text; NotFound:text}}) query;
-    updateApplication: (text, record {"principal":nat32; duration:nat32}) -> (variant {Ok:text; Err:variant {InvalidPayload:text; NotFound:text}});
+type Application = record {
+  id : text;
+  "principal" : nat32;
+  duration : nat32;
+  total_amount : float32;
+  interest : float32;
+  createdAt : nat64;
+  updatedAt : opt nat64;
+  interest_rate : float32;
+  current_status : text;
+};
+type ApplicationPayload = record { "principal" : nat32; duration : nat32 };
+type ErrorVariant = record { InvalidPayload : text; NotFound : text };
+type _AzleResult = variant { Ok : text; Err : ErrorVariant };
+type _AzleResult_1 = variant { Ok : text; Err : text };
+type _AzleResult_2 = variant { Ok : vec Application; Err : text };
+type _AzleResult_3 = variant { Ok : Application; Err : text };
+service : () -> {
+  addApplication : (ApplicationPayload) -> (_AzleResult);
+  calculateAmount : (ApplicationPayload) -> (_AzleResult);
+  deleteApplication : (text) -> (_AzleResult_1);
+  getAllApplications : () -> (_AzleResult_2) query;
+  getSpecificApplication : (text) -> (_AzleResult_3) query;
+  updateApplication : (text, ApplicationPayload) -> (_AzleResult_1);
 }
