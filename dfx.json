@@ -1,0 +1,13 @@
+{
+    "canisters": {
+        "bank_loan_application": {
+            "type": "custom",
+            "main": "src/index.ts",
+            "candid": "src/index.did",
+            "build": "npx azle bank_loan_application",
+            "wasm": ".azle/bank_loan_application/bank_loan_application.wasm",
+            "gzip": true
+        }
+    }
+}
+

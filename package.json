@@ -1,0 +1,20 @@
+{
+    "scripts": {
+        "dfx_install": "DFX_VERSION=0.15.1 sh -ci \"$(curl -fsSL https://sdk.dfinity.org/install.sh)\"",
+        "replica_start": "dfx start --background",
+        "replica_stop": "dfx stop",
+        "canister_deploy_local": "dfx deploy bank_loan_application",
+        "canister_deploy_mainnet": "dfx deploy --network ic bank_loan_application",
+        "canister_uninstall": "dfx canister uninstall-code bank_loan_application",
+        "canister_call_get_message": "dfx canister call bank_loan_application getMessage",
+        "canister_call_set_message": "dfx canister call bank_loan_application setMessage '(\"Hello world!\")'"
+    },
+    "dependencies": {
+        "azle": "0.18.6",
+        "uuid": "^9.0.0"
+    },
+    "devDependencies": {
+        "@types/uuid": "^9.0.6"
+    }
+}
+
