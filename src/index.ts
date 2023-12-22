@@ -1,132 +1,192 @@
 import {
-    Canister,
-    float32,
-    int16,
-    nat,
-    nat16,
-    Variant,
-    nat32,
-    query,
+    $update,
+    $query,
     Record,
-    Result,
     StableBTreeMap,
-    text,
-    update,
-    Void,
-    ic,
-    None,
-    Ok,
-    Opt,
+    match,
+    Result,
+    nat32,
     nat64,
+    ic,
     Vec,
-    Err,
-    Some,
-} from 'azle';
-import { v4 as uuidv4 } from 'uuid';
-
-// Defining the application payload from the user
-let applicationPayload = Record({
-    principal: nat32,
-    duration: nat32,
-});
-
-// Model for the application storage
-let Application = Record({
-    id: text,
-    principal: nat32,
-    duration: nat16,
-    interest_rate: float32,
-    interest: float32,
-    total_amount: float32,
-    createdAt: nat64,
-    updatedAt: Opt(nat64),
-});
-
-// Defining the error message
-const Error = Variant({
-    NotFound: text,
-    InvalidPayload: text,
-});
-
-// Defining a global interest rate
-const rate: float32 = 0.02;
-
-// Defining the storage of the application
-const application_storage = StableBTreeMap(text, Application, 0);
-
-// Defining the canister functions
-export default Canister({
-    // The simple interest calculator to get to know the interest and the amount to be paid.
-    calculateAmount: query([applicationPayload], text, (payload) => {
-        let interest: float32 = payload.principal * rate * (payload.duration / 12);
-        let totalAmount = payload.principal + interest;
-        return `The interest is '${interest}' and the total amount to be paid is '${totalAmount}'`;
-    }),
-
-    // Making a loan application
-    addApplication: update([applicationPayload], Result(text, Error), (payload) => {
-        let interest_calculated: float32 = payload.principal * rate * (payload.duration / 12);
-        let total_calculated: float32 = payload.principal + interest_calculated;
-        let application = {
-            id: uuidv4(),
-            interest_rate: rate,
-            interest: interest_calculated,
-            total_amount: total_calculated,
-            createdAt: ic.time(),
-            updatedAt: None,
+    float32,
+    Opt,
+  } from "azle";
+  import { v4 as uuidv4 } from "uuid";
+  
+  type ApplicationPayload = Record<{
+    principal: nat32;
+    duration: nat32;
+  }>;
+  
+  type Application = Record<{
+    id: string;
+    principal: nat32;
+    duration: nat32;
+    interest_rate: float32;
+    interest: float32;
+    total_amount: float32;
+    createdAt: nat64;
+    updatedAt: Opt<nat64>;
+    current_status: string;
+  }>;
+  
+  type ErrorVariant = Record<{
+    NotFound: string;
+    InvalidPayload: string;
+  }>;
+  
+  const applicationStorage = new StableBTreeMap<string, Application>(0, 44, 1024);
+  
+  $update
+  // Calculate the interest and total amount based on the provided payload
+  export function calculateAmount(payload: ApplicationPayload): Result<string, string> {
+    try {
+      // Validate payload
+      if (!payload || payload.principal <= 0 || payload.duration <= 0) {
+        return Result.Err<string, string>("Invalid payload provided.");
+      }
+  
+      const interest = payload.principal * 0.02 * (payload.duration / 12);
+      const totalAmount = payload.principal + interest;
+  
+      return Result.Ok(
+        `The interest is '${interest}' and the total amount to be paid is '${totalAmount}'`
+      );
+    } catch (error) {
+      return Result.Err<string, string>(`Error calculating amount: ${error}`);
+    }
+  }
+  
+  $update
+  // Add a new loan application based on the provided payload
+  export function addApplication(payload: ApplicationPayload): Result<string, string> {
+    try {
+      // Validate payload
+      if (!payload || payload.principal <= 0 || payload.duration <= 0) {
+        return Result.Err<string, string>("Invalid payload provided.");
+      }
+  
+      const interestCalculated = payload.principal * 0.02 * (payload.duration / 12);
+      const totalCalculated = payload.principal + interestCalculated;
+  
+      // Create a new application
+      const application: Application = {
+        id: uuidv4(),
+        interest_rate: 0.02,
+        interest: interestCalculated,
+        total_amount: totalCalculated,
+        createdAt: ic.time(),
+        updatedAt: Opt.None,
+        ...payload,
+        current_status: "pending",
+      };
+  
+      // Insert the application into storage
+      applicationStorage.insert(application.id, application);
+  
+      return Result.Ok(
+        `Your application with ID ${application.id} for a principal amount of ${application.principal} and duration of ${application.duration} months has been received successfully!`
+      );
+    } catch (error) {
+      return Result.Err<string, string>(`Error adding application: ${error}`);
+    }
+  }
+  
+  $query
+  // Retrieve all loan applications
+  export function getAllApplications(): Result<Vec<Application>, string> {
+    try {
+      // Return all applications
+      return Result.Ok(applicationStorage.values());
+    } catch (error) {
+      return Result.Err(`Error retrieving applications: ${error}`);
+    }
+  }
+  
+  $query
+  // Retrieve a specific loan application by ID
+  export function getSpecificApplication(id: string): Result<Application, string> {
+    // Validate ID
+    if (!id) {
+      return Result.Err<Application, string>("Invalid ID provided.");
+    }
+    try {
+      return match(applicationStorage.get(id), {
+        Some: (application) => Result.Ok<Application, string>(application),
+        None: () => Result.Err<Application, string>(`The application with ID ${id} is not found`),
+      });
+    } catch (error) {
+      return Result.Err(`Error retrieving applications: ${error}`);
+    }
+  }
+  
+  $update
+  // Update an existing loan application based on ID and payload
+  export function updateApplication(
+    id: string,
+    payload: ApplicationPayload
+  ): Result<string, string> {
+    return match(applicationStorage.get(id), {
+      Some: (application) => {
+        try {
+          // Validate payload
+          if (!payload || payload.principal <= 0 || payload.duration <= 0) {
+            return Result.Err<string, string>("Invalid payload provided.");
+          }
+  
+          const interestCalculated = payload.principal * 0.02 * (payload.duration / 12);
+          const totalCalculated = payload.principal + interestCalculated;
+  
+          // Update existing application
+          const updatedApplication: Application = {
+            ...application,
             ...payload,
-        };
-        // Inserting the new application to the storage
-        application_storage.insert(application.id, application);
-        return Ok(`Your application with ID ${application.id} for a principal amount of ${application.principal} and duration of ${application.duration} months has been received successfully!`);
-    }),
-
-    // Retrieving all the applications
-    getAllApplications: query([], Result(Vec(Application), Error), () => {
-        return Ok(application_storage.values());
-    }),
-
-    // Retrieving a specific application
-    getSpecificApplication: query([text], Result(Application, Error), (id) => {
-        const application_option = application_storage.get(id);
-        if ("None" in application_option) {
-            return Err({ NotFound: `The application with ID ${id} is not found` });
+            interest: interestCalculated,
+            total_amount: totalCalculated,
+            updatedAt: Opt.Some(ic.time()),
+          };
+  
+          // Insert the updated application into storage
+          applicationStorage.insert(application.id, updatedApplication);
+  
+          return Result.Ok<string, string>(
+            `You have updated an application with ID ${id} to have a principal amount of ${payload.principal} and duration of ${payload.duration} months`
+          );
+        } catch (error) {
+          return Result.Err<string, string>(`Error updating application: ${error}`);
         }
-        return Ok(application_option.Some);
-    }),
-
-    // Updating an application
-    updateApplication: update([text, applicationPayload], Result(text, Error), (id, payload) => {
-        const application_option = application_storage.get(id);
-        if ("None" in application_option) {
-            return Err({ NotFound: `The application with ID ${id} is not found` });
-        }
-        const application = application_option.Some;
-        application.interest = payload.principal * rate * (payload.duration / 12);
-        application.total_amount = payload.principal + application.interest;
-        const updated_application = { ...application, ...payload, updatedAt: Some(ic.time()) };
-        application_storage.insert(application.id, updated_application);
-        return Ok(`You have updated an application with ID ${id} to have a principal amount of ${payload.principal} and duration of ${payload.duration} months`);
-    }),
-
-    // Deleting an application
-    deleteApplication: update([text], Result(text, Error), (id) => {
-        const application_option = application_storage.remove(id);
-        if ("None" in application_option) {
-            return Err({ NotFound: `The application with ID ${id} is not found` });
-        }
-        return Ok(`You have deleted an application with ID ${id}`);
-    }),
-});
-
-// Function to allow the use of uuid
-globalThis.crypto = {
+      },
+      None: () => Result.Err<string, string>(`The application with ID ${id} is not found`),
+    });
+  }
+  
+  $update
+  // Delete an existing loan application based on ID
+  export function deleteApplication(id: string): Result<string, string> {
+    // Validate ID
+    if (!id) {
+      return Result.Err<string, string>("Invalid ID provided.");
+    }
+    try {
+      return match(applicationStorage.remove(id), {
+        Some: (_) => Result.Ok<string, string>(`You have deleted an application with ID ${id}`),
+        None: () => Result.Err<string, string>(`The application with ID ${id} is not found`),
+      });
+    } catch (error) {
+      return Result.Err(`Error retrieving applications: ${error}`);
+    }
+  }
+  
+  // Function to allow the use of uuid
+  globalThis.crypto = {
     // @ts-ignore
     getRandomValues: () => {
-        let array = new Uint8Array(32);
-        for (let i = 0; i < array.length; i++) {
-            array[i] = Math.floor(Math.random() * 256);
-        }
-        return array;
+      let array = new Uint8Array(32);
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+      return array;
     },
-};
+  };
+  
